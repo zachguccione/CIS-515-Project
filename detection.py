@@ -3,22 +3,22 @@ import numpy as np
 from ultralytics import YOLO
 
 def draw_roi(frame, roi):
-    """Draw ROI rectangle on frame with semi-transparent fill"""
+    """Draw ROI rectangle on frame with semi-transparent grey fill"""
     # Create a copy of the frame for the overlay
     overlay = frame.copy()
     
     # Convert ROI coordinates to integers
     x1, y1, x2, y2 = map(int, roi)
     
-    # Draw filled rectangle
-    cv2.rectangle(overlay, (x1, y1), (x2, y2), (0, 255, 0), -1)  # -1 for filled
+    # Draw filled rectangle with grey color (BGR: 128, 128, 128)
+    cv2.rectangle(overlay, (x1, y1), (x2, y2), (128, 128, 128), -1)  # -1 for filled
     
     # Add the overlay with transparency
-    alpha = 0.1  # Transparency factor
+    alpha = 0.3  # Increased transparency factor for better visibility
     cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
     
-    # Draw the border
-    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 3)  # Thicker border
+    # Draw the border with grey color
+    cv2.rectangle(frame, (x1, y1), (x2, y2), (128, 128, 128), 3)  # Thicker border
 
 def is_in_roi(bbox, roi):
     """Check if bounding box intersects with ROI"""
@@ -56,37 +56,22 @@ def main():
     cv2.resizeWindow('Human Detection', screen_width, screen_height)
     cv2.setWindowProperty('Human Detection', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
     
+    # Define box positions and sizes in pixels
+    # Format: (x1, y1, x2, y2) where (x1,y1) is top-left and (x2,y2) is bottom-right
+    # Original boxes were 200x300 pixels, now reduced by 50% to 100x150 pixels
+    # Centers remain at (200, 250) and (450, 250)
+    roi1 = (150, 175, 250, 325)  # First box: 100x150 pixels
+    roi2 = (400, 175, 500, 325)  # Second box: 100x150 pixels
+    
     while True:
         ret, frame = cap.read()
         if not ret:
             print("Error reading from camera")
             break
             
-        # Get current window size
-        window_width = cv2.getWindowImageRect('Human Detection')[2]
-        window_height = cv2.getWindowImageRect('Human Detection')[3]
-        
-        # Calculate ROI positions based on window size
-        roi_width = window_width // 12  # Smaller width for boxes
-        roi_height = window_height // 4  # Smaller height
-        margin = window_width // 20  # Smaller margin
-        
-        # Calculate center positions for the boxes (shifted more to the left)
-        center_x = window_width // 4  # Changed from // 3 to // 4 to shift more left
-        box_spacing = roi_width // 2  # Space between boxes
-        
-        # Position three boxes side by side (shifted left)
-        roi1 = (int(center_x - roi_width * 1.5 - box_spacing), int(margin),
-                int(center_x - roi_width * 0.5 - box_spacing), int(margin + roi_height))
-        roi2 = (int(center_x - roi_width * 0.5), int(margin),
-                int(center_x + roi_width * 0.5), int(margin + roi_height))
-        roi3 = (int(center_x + roi_width * 0.5 + box_spacing), int(margin),
-                int(center_x + roi_width * 1.5 + box_spacing), int(margin + roi_height))
-            
         # Draw ROIs
         draw_roi(frame, roi1)
         draw_roi(frame, roi2)
-        draw_roi(frame, roi3)
         
         # Add instructions to frame
         cv2.putText(frame, 'Press ESC to exit', (10, 30),
@@ -104,8 +89,7 @@ def main():
                 
                 # Check if detection intersects with any ROI
                 if (is_in_roi((x1, y1, x2, y2), roi1) or 
-                    is_in_roi((x1, y1, x2, y2), roi2) or 
-                    is_in_roi((x1, y1, x2, y2), roi3)):
+                    is_in_roi((x1, y1, x2, y2), roi2)):
                     # Draw bounding box
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
                     # Add confidence score
